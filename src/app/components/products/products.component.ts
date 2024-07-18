@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ProductsService } from '../../services/product.service';
+import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
 import { CommonModule } from '@angular/common';
 
@@ -14,7 +14,7 @@ export class ProductsComponent implements OnInit{
   products: Product [] = [];
   //inyeccion de dependencias mediante constructor
   constructor(
-    private producService : ProductsService
+    private productService : ProductService
   ){}
 
   ngOnInit(): void {
@@ -23,7 +23,7 @@ export class ProductsComponent implements OnInit{
 
   getAllProducts(){
     console.log('here')
-    this.producService.getAllSimple().subscribe(products=>{
+    this.productService.getAllSimple().subscribe(products=>{
         this.products = products;
     });
   }
