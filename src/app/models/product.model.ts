@@ -10,7 +10,7 @@ export interface Product {
   taxes?: number;
 }
 
-
+//si no quiero que lo sobreescriban podria encapsularlo en Readonly
 export interface CreateProductDTO extends Omit<Product, 'id' | 'category'> {
   categoryId: number;
 }
