@@ -3,31 +3,37 @@ import { TestBed } from '@angular/core/testing';
 import { ProductService } from './product.service';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { Product, CreateProductDTO } from '../models/product.model';
+import { HTTP_INTERCEPTORS, HttpStatusCode, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
+import { Product, CreateProductDTO, UpdateProductDTO } from '../models/product.model';
 import { environment } from './../../environments/environment';
 import { generateManyProducts, generateOneProduct } from '../models/product.mock';
+import { TokenInterceptor } from '../interceptors/token.interceptor';
+import { TokenService } from './token.service';
 fdescribe('ProductService', () => {
   let productService: ProductService;
   let httpController: HttpTestingController;
+  let tokenService: TokenService;
   beforeEach(() => {
     TestBed.configureTestingModule({
       //imports : [HttpClientTestingModule],
       providers:[
         ProductService,
-        provideHttpClient(),
+        TokenService,
+        { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true },
+        provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting()
       ]
     });
     productService = TestBed.inject(ProductService);
     httpController = TestBed.inject(HttpTestingController);
+    tokenService = TestBed.inject(TokenService);
   });
 
- /* afterEach(() => {
+ afterEach(() => {
     // Verify that none of the tests make any extra HTTP requests.
     TestBed.inject(HttpTestingController).verify();
     //httpController.verify();
-  });*/
+  });
 
   it('should be created', () => {
     expect(productService).toBeTruthy();
@@ -37,6 +43,7 @@ fdescribe('ProductService', () => {
     it('should return product list',(doneFn)=>{
       //arrange
       const mockData: Product[] = generateManyProducts(3);
+      spyOn(tokenService, 'getToken').and.returnValue('123');
       //Act
       productService.getAllSimple().subscribe((data)=>{
         //Assert
@@ -47,8 +54,10 @@ fdescribe('ProductService', () => {
       //http config
       const apiUrl = `${environment.API_URL}/api/v1/products`;
       const req = httpController.expectOne(apiUrl);
+      const headers = req.request.headers;
+      expect(headers.get('Authorization')).toEqual(`Bearer 123`);
       req.flush(mockData);
-      httpController.verify();
+      //httpController.verify();
     });
   });
 
@@ -66,7 +75,7 @@ fdescribe('ProductService', () => {
       const apiUrl = `${environment.API_URL}/api/v1/products`;
       const req = httpController.expectOne(apiUrl);
       req.flush(mockData);
-      httpController.verify();
+      //httpController.verify();
     });
 
     it('should return product list with taxes',(doneFn)=>{
@@ -103,7 +112,7 @@ fdescribe('ProductService', () => {
       const apiUrl = `${environment.API_URL}/api/v1/products`;
       const req = httpController.expectOne(apiUrl);
       req.flush(mockData);
-      httpController.verify();
+      //httpController.verify();
     });
 
     it('should send query params with limit 10 and offset 3',(doneFn)=>{
@@ -123,7 +132,7 @@ fdescribe('ProductService', () => {
       req.flush(mockData);
       const params = req.request.params;
       expect(params.get('limit')).toEqual(`${limit}`);
-      httpController.verify();
+      //httpController.verify();
     });
   });
 
@@ -148,10 +157,106 @@ fdescribe('ProductService', () => {
       //http config
       const apiUrl = `${environment.API_URL}/api/v1/products`;
       const req = httpController.expectOne(apiUrl);
+      // Proveer una respuesta simulada a una solicitud HTTP.
       req.flush(mockData);
       expect(req.request.body).toEqual(dto);
       expect(req.request.method).toEqual('POST');
-      httpController.verify();
+      //httpController.verify();
+    });
+  });
+
+  describe('test for update',()=>{
+    it('should return updated product',(doneFn)=>{
+      //arrange
+      const mockData: Product = generateOneProduct();
+      const dto: UpdateProductDTO = {
+        title: 'new Product',
+      }
+      const productID = '1';
+      //Act
+      //{...dto} pasas la referencia no el valor
+      productService.update(mockData.id,{...dto}).subscribe((data)=>{
+        //Assert
+        expect(data).toEqual(mockData);
+        doneFn();
+      });
+      //http config
+      const apiUrl = `${environment.API_URL}/api/v1/products/${mockData.id}`;
+      const req = httpController.expectOne(apiUrl);
+      // Proveer una respuesta simulada a una solicitud HTTP.
+      req.flush(mockData);
+      expect(req.request.body).toEqual(dto);
+      expect(req.request.method).toEqual('PUT');
+      //httpController.verify();
+    });
+  });
+
+  describe('test for delete',()=>{
+    it('should return boolean',(doneFn)=>{
+      //arrange
+      const mockData: Product = generateOneProduct();
+      //Act
+      //{...dto} pasas la referencia no el valor
+      productService.delete(mockData.id).subscribe((data)=>{
+        //Assert
+        expect(data).toEqual(true);
+        doneFn();
+      });
+      //http config
+      const apiUrl = `${environment.API_URL}/api/v1/products/${mockData.id}`;
+      const req = httpController.expectOne(apiUrl);
+      // Proveer una respuesta simulada a una solicitud HTTP.
+      req.flush(true);
+      expect(req.request.method).toEqual('DELETE');
+      //httpController.verify();
+    });
+  });
+
+  describe('test for getOne',()=>{
+    it('should return a product',(doneFn)=>{
+      //arrange
+      const mockData: Product = generateOneProduct();
+      const productID = '1';
+      //Act
+      //{...dto} pasas la referencia no el valor
+      productService.getOne(mockData.id).subscribe((data)=>{
+        //Assert
+        expect(data).toEqual(mockData);
+        doneFn();
+      });
+      //http config
+      const apiUrl = `${environment.API_URL}/api/v1/products/${mockData.id}`;
+      const req = httpController.expectOne(apiUrl);
+      // Proveer una respuesta simulada a una solicitud HTTP.
+      req.flush(mockData);
+      expect(req.request.method).toEqual('GET');
+      //httpController.verify();
+    });
+
+    it('should return the right msg when the status code is 404',(doneFn)=>{
+      //arrange
+      const msgError = '404 message'
+      const mockError = {
+        status: HttpStatusCode.NotFound,
+        statusText:msgError,
+      }
+      const productID = '1';
+      //Act
+      //{...dto} pasas la referencia no el valor
+      productService.getOne(productID).subscribe({
+        error: (error) => {
+          // assert
+          expect(error).toEqual('El producto no existe');
+          doneFn();
+        }
+      });
+      //http config
+      const apiUrl = `${environment.API_URL}/api/v1/products/${productID}`;
+      const req = httpController.expectOne(apiUrl);
+      // Proveer una respuesta simulada a una solicitud HTTP.
+      req.flush(msgError, mockError);
+      expect(req.request.method).toEqual('GET');
+      //httpController.verify();
     });
   });
 });

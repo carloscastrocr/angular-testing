@@ -15,4 +15,5 @@ export interface CreateProductDTO extends Omit<Product, 'id' | 'category'> {
   categoryId: number;
 }
 
+// Partial le dice que todos seran opcionales
 export interface UpdateProductDTO extends Partial<CreateProductDTO> { }
