@@ -44,6 +44,12 @@ module.exports = function (config) {
     //reporters: ['progress', 'kjhtml'],
     reporters: ['mocha'],
     browsers: ['Chrome'],
+    customLaunchers:{
+      ChromeHeadlessCI:{
+        base: ' ChromeHeadlessCI',
+        flags: ['--no-sandbox']
+      }
+    },
     restartOnFileChange: true
   });
 };
